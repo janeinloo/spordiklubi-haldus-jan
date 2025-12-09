@@ -20,11 +20,19 @@ export default function CreateClubPage() {
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [fromApp, setFromApp] = useState(false)
+
+  //useEffect(() => {
+  //const role = sessionStorage.getItem("signup_role")
+  //if (role !== "coach") router.replace("/auth/sign-up/role")
+  //}, [router])
 
   useEffect(() => {
-    const role = sessionStorage.getItem("signup_role")
-    if (role !== "coach") router.replace("/auth/sign-up/role")
-  }, [router])
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      setFromApp(params.get("from") === "app")
+    }
+  }, [])
 
   const onFilePick = (f: File | null) => {
     if (!f) return
@@ -121,10 +129,31 @@ export default function CreateClubPage() {
 
       sessionStorage.setItem("signup_club_name", trimmedName)
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user) {
+        const { error: memberError } = await supabase.from("member").insert({
+          club_id: clubId,
+          profile_id: user.id,
+        })
+
+        if (memberError) {
+          console.error("Failed to add user to club:", memberError)
+        }
+      } else {
+        console.warn("User not logged in yet — skipping member insert for now")
+      }
+
       // Keep your little loading pause if you like the feel
       setTimeout(() => {
         setLoading(false)
-        router.push(`/auth/sign-up-success`)
+        if (fromApp) {
+          router.push(`/${clubslug}/dashboard`)
+        } else {
+          router.push(`/auth/sign-up-success`)
+        }
       }, 1000)
     } catch (err) {
       console.error("Failed to create club:", err)

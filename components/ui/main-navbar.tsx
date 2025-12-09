@@ -194,7 +194,7 @@ export function MainNavbar({ clubslug }: { clubslug: string }) {
                     onClick={() => setMenuOpen(false)}
                   >
                     <Shuffle className="h-4 w-4" />
-                    <span>Switch team</span>
+                    <span>Switch club</span>
                   </Link>
                 </li>
 

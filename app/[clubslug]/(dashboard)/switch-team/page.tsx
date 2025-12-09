@@ -28,81 +28,61 @@ export default function SwitchTeamPage() {
   const [loading, setLoading] = useState(true)
   const [isCoach, setIsCoach] = useState(false)
 
-  // LOAD USER + PROFILE ROLE
   useEffect(() => {
     async function loadData() {
       setLoading(true)
 
-      // 1) Load user
       const {
         data: { user },
-        error: userErr,
       } = await supabase.auth.getUser()
+      if (!user) return
 
-      if (userErr || !user) {
-        console.error("Not authenticated")
-        return
-      }
-
-      // 2) Load profile (to detect role)
-      const { data: profile, error: profErr } = await supabase
+      const { data: profile } = await supabase
         .from("profile")
         .select("role_id")
         .eq("id", user.id)
         .single()
 
-      if (profErr) {
-        console.error("Failed to load profile role", profErr)
-      } else {
-        setIsCoach(profile?.role_id === 1) // 1 = coach
-      }
+      setIsCoach(profile?.role_id === 1)
 
-      // 3) Load membership clubs
-      const { data: memberships, error: memErr } = await supabase
+      const { data: memberships } = await supabase
         .from("member")
-        .select(`
+        .select(
+          `
           club:club_id (
             id,
             name,
             slug,
             club_logo
           )
-        `)
+        `,
+        )
         .eq("profile_id", user.id)
         .returns<MemberWithClub[]>()
 
-      if (memErr) {
-        console.error("Failed to load user clubs", memErr)
-      } else {
-        const clubList =
-          (memberships ?? [])
-            .map((row) => row.club)
-            .filter((c): c is Club => c !== null)
+      const clubList = (memberships ?? [])
+        .map(row => row.club)
+        .filter((c): c is Club => c !== null)
 
-        setClubs(clubList)
-      }
-
+      setClubs(clubList)
       setLoading(false)
     }
 
     loadData()
   }, [])
 
-  // HANDLE SELECT CLUB
   function handleSelectClub(slug: string) {
     router.push(`/${slug}/dashboard`)
   }
 
-  // DEFAULT LOGO FALLBACK
   function getLogoSrc(logo: string | null) {
     return logo && logo.length > 0 ? logo : "/images/syncc.png"
   }
 
-  // RENDER
   if (loading) {
     return (
       <div className="flex justify-center pt-10 text-gray-600">
-        Loading your teams...
+        Loading your clubs...
       </div>
     )
   }
@@ -110,15 +90,15 @@ export default function SwitchTeamPage() {
   return (
     <div className="flex flex-col items-center pt-6 px-4">
       <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
-        Switch Team
+        Switch Club
       </h1>
 
       <p className="text-gray-500 mb-10 text-center">
-        Choose which team you want to manage
+        Choose which club you want to manage
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-10">
-        {clubs.map((club) => (
+        {clubs.map(club => (
           <div
             key={club.id}
             onClick={() => handleSelectClub(club.slug)}
@@ -129,7 +109,7 @@ export default function SwitchTeamPage() {
           >
             <div
               className="
-              relative h-28 w-28 sm:h-32 sm:w-32 rounded-xl overflow-hidden 
+              relative h-28 w-28 sm:h-32 sm:w-32 rounded-3xl overflow-hidden 
               border-2 border-transparent hover:border-blue-500
               transition
             "
@@ -138,20 +118,14 @@ export default function SwitchTeamPage() {
                 src={getLogoSrc(club.club_logo)}
                 fill
                 alt={club.name}
-                className="object-cover"
+                className="object-contain p-2"
               />
             </div>
 
-            <p
-              className="
-              mt-3 text-sm sm:text-base font-medium text-gray-800
-              group-hover:text-blue-600 transition
-            "
-            >
+            <p className="mt-3 text-sm sm:text-base font-medium text-gray-800">
               {club.name}
             </p>
 
-            {/* ACTIVE LABEL */}
             {club.slug === activeSlug && (
               <span className="mt-1 text-xs text-blue-600 font-semibold">
                 Active
@@ -160,13 +134,12 @@ export default function SwitchTeamPage() {
           </div>
         ))}
 
-        {/* CREATE CLUB — ONLY IF COACH */}
         {isCoach && (
           <Link
-            href="/auth/sign-up/createclub"
+            href="/auth/sign-up/createclub?from=app"
             className="
               flex flex-col items-center justify-center
-              rounded-xl border-2 border-dashed border-blue-400 
+              rounded-3xl border-2 border-dashed border-blue-400 
               h-28 w-28 sm:h-32 sm:w-32
               hover:bg-blue-50 hover:border-blue-500
               transition cursor-pointer
