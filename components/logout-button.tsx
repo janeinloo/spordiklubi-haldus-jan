@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 interface LogoutButtonProps {
-  children: React.ReactNode
+  children?: React.ReactNode
   className?: string
   onClick?: () => void
 }
