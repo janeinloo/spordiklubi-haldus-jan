@@ -1,15 +1,20 @@
 // app/api/events/[id]/route.ts
-import { NextResponse } from "next/server"
+
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
+// Proper Next.js 16 context typing
 type RouteContext = {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 // GET /api/events/:id
-export async function GET(_req: Request, context: RouteContext) {
+export async function GET(
+  _req: NextRequest,
+  context: RouteContext
+) {
   const supabase = await createClient()
-  const { id } = await context.params
+  const { id } = context.params
 
   const { data, error } = await supabase
     .from("event")
@@ -27,7 +32,7 @@ export async function GET(_req: Request, context: RouteContext) {
       created_by,
       created_at,
       updated_at
-    `,
+    `
     )
     .eq("id", id)
     .single()
@@ -41,9 +46,12 @@ export async function GET(_req: Request, context: RouteContext) {
 }
 
 // PATCH /api/events/:id
-export async function PATCH(req: Request, context: RouteContext) {
+export async function PATCH(
+  req: NextRequest,
+  context: RouteContext
+) {
   const supabase = await createClient()
-  const { id } = await context.params
+  const { id } = context.params
   const body = await req.json()
 
   const { data, error } = await supabase
@@ -64,7 +72,7 @@ export async function PATCH(req: Request, context: RouteContext) {
       created_by,
       created_at,
       updated_at
-    `,
+    `
     )
     .single()
 
@@ -77,11 +85,17 @@ export async function PATCH(req: Request, context: RouteContext) {
 }
 
 // DELETE /api/events/:id
-export async function DELETE(_req: Request, context: RouteContext) {
+export async function DELETE(
+  _req: NextRequest,
+  context: RouteContext
+) {
   const supabase = await createClient()
-  const { id } = await context.params
+  const { id } = context.params
 
-  const { error } = await supabase.from("event").delete().eq("id", id)
+  const { error } = await supabase
+    .from("event")
+    .delete()
+    .eq("id", id)
 
   if (error) {
     console.error("[DELETE /api/events/:id] error:", error)

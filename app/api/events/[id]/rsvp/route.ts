@@ -1,18 +1,17 @@
 // app/api/events/[id]/rsvp/route.ts
-import { NextResponse } from "next/server"
+
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import type { RsvpStatus, RsvpProfile } from "@/types/events"
 
 type RouteContext = {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 // POST /api/events/:id/rsvp
-// body: { status: 'going' | 'not_going' | 'maybe', note?: string }
-export async function POST(req: Request, context: RouteContext) {
+export async function POST(req: NextRequest, context: RouteContext) {
   const supabase = await createClient()
-  const { id } = await context.params
-  const eventId = Number(id)
+  const eventId = Number(context.params.id)
 
   const body = (await req.json()) as { status: RsvpStatus; note?: string }
   const { status, note } = body
@@ -41,9 +40,11 @@ export async function POST(req: Request, context: RouteContext) {
         status,
         note,
       },
-      { onConflict: "profile_id,event_id" },
+      { onConflict: "profile_id,event_id" }
     )
-    .select("id, event_id, profile_id, status, note, created_at, updated_at")
+    .select(
+      "id, event_id, profile_id, status, note, created_at, updated_at"
+    )
     .single()
 
   if (error) {
@@ -55,11 +56,9 @@ export async function POST(req: Request, context: RouteContext) {
 }
 
 // GET /api/events/:id/rsvp
-// returns { going: RsvpProfile[], not_going: RsvpProfile[], maybe: RsvpProfile[] }
-export async function GET(_req: Request, context: RouteContext) {
+export async function GET(_req: NextRequest, context: RouteContext) {
   const supabase = await createClient()
-  const { id } = await context.params
-  const eventId = Number(id)
+  const eventId = Number(context.params.id)
 
   const { data, error } = await supabase
     .from("event_rsvp")
@@ -75,7 +74,7 @@ export async function GET(_req: Request, context: RouteContext) {
           name
         )
       )
-    `,
+    `
     )
     .eq("event_id", eventId)
 

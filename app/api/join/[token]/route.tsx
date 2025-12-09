@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
+type RouteContext = {
+  params: { token: string }
+}
+
 export async function POST(
   req: NextRequest,
-  { params }: { params: { token: string } },
+  context: RouteContext
 ) {
   const supabase = await createClient()
-  const resolvedParams = await params
-  const { token } = resolvedParams
+  const { token } = context.params
 
   const {
     data: { session },
     error: sessionError,
   } = await supabase.auth.getSession()
 
-  if (sessionError)
+  if (sessionError) {
     return NextResponse.json({ error: sessionError.message }, { status: 400 })
-  if (!session?.user)
+  }
+
+  if (!session?.user) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 })
+  }
 
   const userId = session.user.id
 
@@ -43,14 +49,16 @@ export async function POST(
 
     return NextResponse.json(
       { error: "Club not found for this invite" },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
-  const { error: memberError } = await supabase.from("member").upsert({
-    profile_id: userId,
-    club_id: club.id,
-  })
+  const { error: memberError } = await supabase
+    .from("member")
+    .upsert({
+      profile_id: userId,
+      club_id: club.id,
+    })
 
   if (memberError) {
     return NextResponse.json({ error: memberError.message }, { status: 400 })

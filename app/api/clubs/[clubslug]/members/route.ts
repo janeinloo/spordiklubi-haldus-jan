@@ -1,9 +1,12 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET(req: Request, { params }: { params: { clubslug: string } }) {
-      const resolvedParams = await params
-      const {clubslug} = resolvedParams
+export async function GET(
+  req: NextRequest,
+  context: { params: { clubslug: string } }
+) {
+  const { clubslug } = context.params
+
   const supabase = await createClient()
 
   console.log("Received slug:", clubslug)

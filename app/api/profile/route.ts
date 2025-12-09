@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 type RoleName = "coach" | "player"
@@ -28,7 +28,7 @@ type ProfileRow = {
 }
 
 // GET /api/profile or /api/profile?clubSlug=my-club
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
 
   const { searchParams } = new URL(req.url)

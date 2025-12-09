@@ -1,20 +1,19 @@
 // app/api/events/route.ts
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 // GET /api/events?clubId=123
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { searchParams } = new URL(req.url)
 
   const clubIdParam = searchParams.get("clubId")
   const clubId = Number(clubIdParam)
 
-  // Validate clubId parameter
   if (!clubIdParam || Number.isNaN(clubId) || clubId <= 0) {
     return NextResponse.json(
       { error: "Valid numeric clubId query param is required" },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
@@ -34,7 +33,7 @@ export async function GET(req: Request) {
       created_by,
       created_at,
       updated_at
-    `
+      `
     )
     .eq("club_id", clubId)
     .order("date", { ascending: true })
@@ -44,7 +43,7 @@ export async function GET(req: Request) {
     console.error("[GET /api/events] error:", error)
     return NextResponse.json(
       { error: "Failed to load events" },
-      { status: 500 },
+      { status: 500 }
     )
   }
 
@@ -52,7 +51,7 @@ export async function GET(req: Request) {
 }
 
 // POST /api/events
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const body = await req.json()
 
@@ -67,7 +66,6 @@ export async function POST(req: Request) {
     club_id,
   } = body
 
-  // Strong validation for required fields
   if (
     typeof title !== "string" ||
     typeof description !== "string" ||
@@ -79,18 +77,17 @@ export async function POST(req: Request) {
   ) {
     return NextResponse.json(
       { error: "Invalid or missing required fields" },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
   if (club_id <= 0) {
     return NextResponse.json(
       { error: "club_id must be a valid numeric ID" },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
-  // Check authentication
   const {
     data: { user },
     error: authError,
@@ -129,7 +126,7 @@ export async function POST(req: Request) {
       created_by,
       created_at,
       updated_at
-    `
+      `
     )
     .single()
 
@@ -137,7 +134,7 @@ export async function POST(req: Request) {
     console.error("[POST /api/events] error:", error)
     return NextResponse.json(
       { error: "Failed to create event" },
-      { status: 500 },
+      { status: 500 }
     )
   }
 

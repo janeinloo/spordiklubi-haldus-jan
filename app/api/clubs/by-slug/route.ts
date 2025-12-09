@@ -1,8 +1,8 @@
 // app/api/clubs/by-slug/route.ts
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { searchParams } = new URL(req.url)
   const slug = searchParams.get("slug")
