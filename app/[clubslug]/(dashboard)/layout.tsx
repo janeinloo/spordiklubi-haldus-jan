@@ -9,11 +9,11 @@ export default async function DashboardLayout({
   params,
 }: {
   children: ReactNode
-  params: { clubslug: string }
+  params: Promise<{ clubslug: string }>
 }) {
+  const { clubslug } = await params
+
   if (PROTECT_DASHBOARD) {
-    const resolvedParams = await params
-    const { clubslug } = resolvedParams
     return (
       <div className="bg-[#f7f6fb] min-h-screen">
         <MainNavbar clubslug={clubslug} />
@@ -37,4 +37,5 @@ export default async function DashboardLayout({
   //     <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
   //   </div>
   // )
+
 }
