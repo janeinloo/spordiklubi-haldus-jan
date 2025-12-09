@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 type RouteContext = {
-  params: { token: string }
+  params: Promise<{ token: string }>
 }
 
 export async function POST(
@@ -10,7 +10,8 @@ export async function POST(
   context: RouteContext
 ) {
   const supabase = await createClient()
-  const { token } = context.params
+
+  const { token } = await context.params
 
   const {
     data: { session },
