@@ -5,13 +5,15 @@ import { createClient } from "@/lib/supabase/server"
 import type { RsvpStatus, RsvpProfile } from "@/types/events"
 
 type RouteContext = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 // POST /api/events/:id/rsvp
 export async function POST(req: NextRequest, context: RouteContext) {
   const supabase = await createClient()
-  const eventId = Number(context.params.id)
+
+  const { id } = await context.params
+  const eventId = Number(id)
 
   const body = (await req.json()) as { status: RsvpStatus; note?: string }
   const { status, note } = body
@@ -58,7 +60,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
 // GET /api/events/:id/rsvp
 export async function GET(_req: NextRequest, context: RouteContext) {
   const supabase = await createClient()
-  const eventId = Number(context.params.id)
+
+  const { id } = await context.params
+  const eventId = Number(id)
 
   const { data, error } = await supabase
     .from("event_rsvp")
