@@ -1,18 +1,11 @@
 import { ClubSelectForm } from "@/components/clubSelectForm"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-
-interface Club {
-  slug: string
-  name: string
-}
-
-interface MemberWithClub {
-  club: Club | null
-}
+import { MemberWithClub } from "@/types/clubs"
 
 export default async function ClubSelectionPage() {
   const supabase = await createClient()
+
   const {
     data: { session },
     error: sessionError,
@@ -29,7 +22,7 @@ export default async function ClubSelectionPage() {
     .select("club(slug, name)")
     .eq("profile_id", session.user.id)) as {
     data: MemberWithClub[] | null
-    error: any
+    error: unknown
   }
 
   if (error) throw error

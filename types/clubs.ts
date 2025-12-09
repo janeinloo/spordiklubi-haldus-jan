@@ -1,8 +1,8 @@
 export interface Club {
-  id: number
+  id?: number
   name: string
   slug: string
-  club_logo: string | null
+  club_logo?: string | null
 }
 
 export interface MemberWithClub {
