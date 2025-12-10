@@ -59,6 +59,29 @@ export default function ClubSettings({
     return publicUrlData.publicUrl
   }
 
+  const handleDeleteMember = async (memberId: string) => {
+    if (!confirm("Are you sure you want to remove this member?")) return
+
+    try {
+      const { error } = await supabase
+        .from("member")
+        .delete()
+        .eq("id", memberId)
+
+      if (error) {
+        console.error("Failed to delete member:", error)
+        alert("Failed to remove member. Try again.")
+        return
+      }
+
+      // Update UI
+      setMembers(prev => prev.filter(m => m.id !== memberId))
+    } catch (err) {
+      console.error(err)
+      alert("Unexpected error removing member.")
+    }
+  }
+
   const handleSaveClub = async () => {
     if (!clubName || !clubId) {
       alert("Club name is required")
@@ -369,6 +392,7 @@ export default function ClubSettings({
                     {/* Delete button */}
                     <button
                       type="button"
+                      onClick={() => handleDeleteMember(m.id)}
                       className="text-gray-500 hover:text-red-500 transition"
                       aria-label="Remove member"
                     >
