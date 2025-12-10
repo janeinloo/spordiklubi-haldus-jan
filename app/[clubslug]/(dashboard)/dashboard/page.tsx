@@ -346,6 +346,8 @@ export default function DashboardPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [stats, setStats] = useState<DashboardStats | null>(null)
 
+  localStorage.removeItem("pendingClubId")
+
   useEffect(() => {
     let mounted = true
 
@@ -421,48 +423,49 @@ export default function DashboardPage() {
   }
 
   if (errorMessage === "Club not found.") {
-  return (
-    <div className="max-w-3xl mx-auto px-4 pt-10 pb-6">
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
-        <h1 className="mb-2 text-lg font-semibold text-red-800">
-          Club not found
-        </h1>
-        <p className="text-sm text-red-700">
-          The club you tried to access doesn&apos;t exist or is no longer
+    return (
+      <div className="max-w-3xl mx-auto px-4 pt-10 pb-6">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
+          <h1 className="mb-2 text-lg font-semibold text-red-800">
+            Club not found
+          </h1>
+          <p className="text-sm text-red-700">
+            The club you tried to access doesn&apos;t exist or is no longer
             available. Please check the URL or switch to another team.
-        </p>
+          </p>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
-if (errorMessage === "You are not a member of this club.") {
-  return (
-    <div className="max-w-3xl mx-auto px-4 pt-10 pb-6">
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
-        <h1 className="mb-2 text-lg font-semibold text-red-800">
-          Access denied
-        </h1>
-        <p className="text-sm text-red-700">
-          You do not have permission to view this dashboard because you are not a member of this team.
-        </p>
+  if (errorMessage === "You are not a member of this club.") {
+    return (
+      <div className="max-w-3xl mx-auto px-4 pt-10 pb-6">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
+          <h1 className="mb-2 text-lg font-semibold text-red-800">
+            Access denied
+          </h1>
+          <p className="text-sm text-red-700">
+            You do not have permission to view this dashboard because you are
+            not a member of this team.
+          </p>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
-if (errorMessage) {
-  return (
-    <div className="max-w-3xl mx-auto px-4 pt-10 pb-6">
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
-        <h1 className="mb-2 text-lg font-semibold text-red-800">
-          Something went wrong
-        </h1>
-        <p className="text-sm text-red-700">{errorMessage}</p>
+  if (errorMessage) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 pt-10 pb-6">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
+          <h1 className="mb-2 text-lg font-semibold text-red-800">
+            Something went wrong
+          </h1>
+          <p className="text-sm text-red-700">{errorMessage}</p>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
   if (!stats) {
     return null

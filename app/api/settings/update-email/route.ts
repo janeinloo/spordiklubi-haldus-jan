@@ -31,5 +31,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: updateError.message }, { status: 400 })
   }
 
+    const { error: profileError } = await supabase
+    .from("profile")
+    .update({ "email": email })
+    .eq("id", user.id)
+
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 400 })
+  }
+
   return NextResponse.json({ success: true })
 }
