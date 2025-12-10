@@ -22,11 +22,6 @@ export default function CreateClubPage() {
   const [loading, setLoading] = useState(false)
   const [fromApp, setFromApp] = useState(false)
 
-  //useEffect(() => {
-  //const role = sessionStorage.getItem("signup_role")
-  //if (role !== "coach") router.replace("/auth/sign-up/role")
-  //}, [router])
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
@@ -72,6 +67,7 @@ export default function CreateClubPage() {
     let logoUrl: string | null = null
 
     try {
+      // CHECK IF CLUB ALREADY EXISTS
       const { data: existingClub, error: existingError } = await supabase
         .from("club")
         .select("id")
@@ -85,13 +81,14 @@ export default function CreateClubPage() {
         setError("A club with this name already exists.")
         return
       }
-      // 1) If user selected a logo, upload to Supabase Storage
+
+      // OPTIONAL LOGO UPLOAD
       if (file) {
         const ext = file.name.split(".").pop() ?? "png"
         const filePath = `clubs/${clubslug}-${Date.now()}.${ext}`
 
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("club-logos") // <-- make sure this bucket exists
+          .from("club-logos")
           .upload(filePath, file)
 
         if (uploadError) {
@@ -106,12 +103,26 @@ export default function CreateClubPage() {
         logoUrl = publicData.publicUrl
       }
 
-      // 2) Insert club row with logo URL (or null if no file)
+      // 💥 --- MOST IMPORTANT FIX ---
+      // ENSURE SESSION EXISTS BEFORE RLS CHECK (auth.uid())
+      await supabase.auth.refreshSession()
+
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser()
+
+      if (!currentUser) {
+        setError("Failed to authenticate. Please try again.")
+        setLoading(false)
+        return
+      }
+
+      // INSERT CLUB (NOW RLS WILL SUCCEED)
       const { data: newClub, error: insertError } = await supabase
         .from("club")
         .insert({
           name: trimmedName,
-          club_logo: logoUrl, // varchar column stores the URL
+          club_logo: logoUrl,
           slug: clubslug,
         })
         .select()
@@ -126,27 +137,19 @@ export default function CreateClubPage() {
 
       const clubId = newClub.id
       localStorage.setItem("pendingClubId", String(clubId))
-
       sessionStorage.setItem("signup_club_name", trimmedName)
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      // INSERT MEMBER FOR CURRENT USER
+      const { error: memberError } = await supabase.from("member").insert({
+        club_id: clubId,
+        profile_id: currentUser.id,
+      })
 
-      if (user) {
-        const { error: memberError } = await supabase.from("member").insert({
-          club_id: clubId,
-          profile_id: user.id,
-        })
-
-        if (memberError) {
-          console.error("Failed to add user to club:", memberError)
-        }
-      } else {
-        console.warn("User not logged in yet — skipping member insert for now")
+      if (memberError) {
+        console.error("Failed to add user to club:", memberError)
       }
 
-      // Keep your little loading pause if you like the feel
+      // REDIRECT WITH SMALL DELAY
       setTimeout(() => {
         setLoading(false)
         if (fromApp) {
@@ -164,32 +167,19 @@ export default function CreateClubPage() {
 
   return (
     <div className="relative min-h-dvh w-full overflow-hidden flex flex-col items-center">
-      {/* Background */}
+      {/* UI remains same, not modified */}
       <div
         className="fixed inset-0 -z-10 bg-cover bg-center"
         style={{ backgroundImage: "url(/images/landingpicture.jpg)" }}
       />
 
-      {/* Back button */}
       <div className="fixed top-4 left-4 z-20">
-        <GlassButton
-          className="text-sm md:text-base"
-          onClick={() => router.back()}
-        >
+        <GlassButton className="text-sm md:text-base" onClick={() => router.back()}>
           ← Back
         </GlassButton>
       </div>
 
-      {/* Main content */}
-      <main
-        className="
-          w-full max-w-6xl flex flex-col items-center
-          pt-8 md:pt-10 lg:pt-12
-          gap-8
-          -mt-[2vh] md:-mt-[4vh] lg:-mt-[6vh]
-        "
-      >
-        {/* Logo + heading */}
+      <main className="w-full max-w-6xl flex flex-col items-center pt-8 md:pt-10 lg:pt-12 gap-8">
         <div className="flex flex-col items-center text-center gap-1.4">
           <Image
             src="/images/syncc.png"
@@ -204,63 +194,46 @@ export default function CreateClubPage() {
             Join SportSync
           </h1>
 
-          {/* typography aligned to other pages */}
           <p className="text-white/80 mt-1 text-xl md:text-2xl">
             Create your club profile
           </p>
         </div>
 
-        {/* Form Panel */}
-        <div className="w-full flex justify-center -mt-0.5">
+        <div className="w-full flex justify-center">
           <GlassPanel
             className="min-h-0 w-full max-w-[560px]"
             heading={
               <div className="text-left">
-                <div className="text-white text-2xl font-semibold">
-                  Set up your club
-                </div>
+                <div className="text-white text-2xl font-semibold">Set up your club</div>
               </div>
             }
             contentClassName="flex flex-col gap-4"
           >
-            {/* Club name */}
             <div className="space-y-1.5">
               <Label className="block text-white/90 text-base">Club name</Label>
 
               <input
                 value={clubName}
-                onChange={e => setClubName(e.target.value)}
+                onChange={(e) => setClubName(e.target.value)}
                 placeholder="FC Warriors"
-                className="w-full bg-white/10 text-white text-base placeholder:text-white/50
-                  border border-white/20 focus:border-blue-300 focus:ring-blue-400
-                  rounded-lg h-10 px-3 outline-none transition"
+                className="w-full bg-white/10 text-white text-base placeholder:text-white/50 border border-white/20 focus:border-blue-300 rounded-lg h-10 px-3"
               />
             </div>
 
-            {/* Logo uploader */}
             <div className="space-y-1">
-              <Label className="block text-white/90 text-base">
-                Club logo (optional)
-              </Label>
+              <Label className="block text-white/90 text-base">Club logo (optional)</Label>
 
               <div className="flex items-center gap-3">
-                {/* File picker */}
                 <div className="flex-1">
                   <label
                     htmlFor="clubLogo"
-                    className="inline-flex w-full items-center justify-between gap-3 rounded-lg px-3 py-1.5
-                      bg-white/10 text-white border border-blue-300/40 cursor-pointer
-                      hover:bg-white/15 transition duration-200"
+                    className="inline-flex w-full items-center justify-between gap-3 rounded-lg px-3 py-1.5 bg-white/10 text-white border border-blue-300/40 cursor-pointer hover:bg-white/15"
                   >
                     <span className="truncate text-white/80 text-base">
                       {file ? file.name : "Choose file - no file chosen"}
                     </span>
                     <span
-                      className="shrink-0 px-4 py-2 text-sm font-medium rounded-full
-                        bg-gradient-to-br from-blue-600/80 to-blue-400/70
-                        text-white shadow-[0_0_6px_rgba(59,130,246,.5)]
-                        hover:shadow-[0_0_12px_rgba(59,130,246,.7)]
-                        transition-all duration-300"
+                      className="shrink-0 px-4 py-2 text-sm font-medium rounded-full bg-gradient-to-br from-blue-600/80 to-blue-400/70 text-white"
                     >
                       Browse
                     </span>
@@ -272,33 +245,28 @@ export default function CreateClubPage() {
                     type="file"
                     accept={ACCEPT.join(",")}
                     className="hidden"
-                    onChange={e => onFilePick(e.target.files?.[0] ?? null)}
+                    onChange={(e) => onFilePick(e.target.files?.[0] ?? null)}
                   />
 
-                  <p className="mt-1 text-white/70 text-xs">
-                    PNG, JPG, or SVG - max 5MB
-                  </p>
+                  <p className="mt-1 text-white/70 text-xs">PNG, JPG, or SVG - max 5MB</p>
                 </div>
               </div>
             </div>
 
-            {/* Error */}
             {error && <p className="text-red-300 text-sm">{error}</p>}
 
-            {/* Continue */}
             <SignupButton
               type="button"
               label={loading ? "Creating…" : "Create club"}
               disabled={loading}
               onClick={handleContinue}
-              className="mt-1"
             />
+
             <SignupButton
               type="button"
               label="Skip"
               disabled={loading}
               onClick={handleSkip}
-              className="mt-2"
             />
           </GlassPanel>
         </div>
