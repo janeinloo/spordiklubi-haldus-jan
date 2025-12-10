@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   // Insert new invite
   const { data: newInvite, error } = await supabase
     .from("club_invite")
-    .insert({ token })
+    .insert({ token, club_id })
     .select()
     .maybeSingle()
 

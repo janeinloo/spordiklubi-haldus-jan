@@ -126,7 +126,7 @@ export function MainNavbar({ clubslug }: { clubslug: string }) {
             <>
               <div className="relative h-16 w-16 overflow-hidden">
                 <Image
-                  src={clubLogoSrc ?? "/images/Kuressaare.png"}
+                  src={clubLogoSrc ?? "/images/syncc.png"}
                   fill
                   alt={`${clubName || "Club"} logo`}
                   className="object-contain"
