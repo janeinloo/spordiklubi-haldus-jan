@@ -64,7 +64,7 @@ function getInitials(name: string) {
 
 type EventFilter = "upcoming" | "past"
 
-// --- NEW: helpers for consistent sorting by date + time ---
+// helpers for consistent sorting by date + time
 function getEventDateTime(ev: RsvpEvent) {
   // ev.date is YYYY-MM-DD and ev.time is HH:mm
   return new Date(`${ev.date}T${ev.time || "00:00"}`)
@@ -75,6 +75,9 @@ function sortEventsByDateTime(list: RsvpEvent[]): RsvpEvent[] {
     (a, b) => getEventDateTime(a).getTime() - getEventDateTime(b).getTime(),
   )
 }
+
+// explicit error type for club / slug (codes, not messages)
+type ClubError = "not-found" | "not-member" | "failed" | "error" | null
 
 export default function EventsPage() {
   // read slug from URL params (matches [clubslug] in folder)
@@ -99,7 +102,8 @@ export default function EventsPage() {
   const [activeClubId, setActiveClubId] = useState<number | null>(null)
 
   // error specifically for club / slug
-  const [clubError, setClubError] = useState<string | null>(null)
+  const [clubError, setClubError] = useState<ClubError>(null)
+  const [clubLoading, setClubLoading] = useState(true)
 
   const currentUserName = profile?.name ?? ""
   const currentUserRole: UserRole = profile?.role ?? null
@@ -176,30 +180,44 @@ export default function EventsPage() {
     if (!clubslug) {
       setActiveClubId(null)
       setEvents([])
-      setClubError("Club not found")
+      setClubError("not-found")
+      setClubLoading(false)
       return
     }
 
+    // 🔹 Immediately reset state when slug changes
+    setActiveClubId(null)
+    setEvents([])
+    setClubError(null)
+    setClubLoading(true)
+
     const fetchClubBySlug = async () => {
       try {
-        setClubError(null)
         const res = await fetch(
           `/api/clubs/by-slug?slug=${encodeURIComponent(clubslug)}`,
         )
 
         if (res.status === 404) {
           console.warn("Club not found for slug:", clubslug)
-          setActiveClubId(null)
-          setEvents([])
-          setClubError("Club not found")
+          setClubError("not-found")
+          return
+        }
+
+        if (res.status === 403) {
+          console.warn("Access denied for club slug:", clubslug)
+          setClubError("not-member")
           return
         }
 
         if (!res.ok) {
-          console.error("Failed to fetch club by slug", await res.text())
-          setActiveClubId(null)
-          setEvents([])
-          setClubError("Failed to load club")
+          const text = await res.text()
+          console.error("Failed to fetch club by slug", text)
+
+          if (text.toLowerCase().includes("not a member of this club")) {
+            setClubError("not-member")
+          } else {
+            setClubError("failed")
+          }
           return
         }
 
@@ -215,7 +233,9 @@ export default function EventsPage() {
         console.error("Error fetching club by slug", err)
         setActiveClubId(null)
         setEvents([])
-        setClubError("Error loading club")
+        setClubError("error")
+      } finally {
+        setClubLoading(false)
       }
     }
 
@@ -243,7 +263,7 @@ export default function EventsPage() {
         const data = (await res.json()) as EventType[]
         const uiEvents = data.map(mapApiEventToUi)
 
-        // NEW: ensure events are sorted locally as well
+        // ensure events are sorted locally as well
         setEvents(sortEventsByDateTime(uiEvents))
       } catch (err) {
         console.error("Error fetching events", err)
@@ -357,7 +377,7 @@ export default function EventsPage() {
         const created = (await res.json()) as EventType
         const uiEvent = mapApiEventToUi(created)
 
-        // NEW: insert + sort so 12:00 comes before 18:00 on the same day
+        // insert + sort so 12:00 comes before 18:00 on the same day
         setEvents(prev => sortEventsByDateTime([...prev, uiEvent]))
       } else {
         // UPDATE
@@ -375,7 +395,7 @@ export default function EventsPage() {
         const saved = (await res.json()) as EventType
         const uiEvent = mapApiEventToUi(saved)
 
-        // NEW: replace + sort after edit
+        // replace + sort after edit
         setEvents(prev =>
           sortEventsByDateTime(
             prev.map(e => (e.id === uiEvent.id ? uiEvent : e)),
@@ -595,17 +615,38 @@ export default function EventsPage() {
     )
   }
 
-  // If slug is invalid / club not found, show friendly message
-  if (clubError) {
+  // While we are resolving the club (or after slug change), don't render the main UI yet
+  if (clubLoading) {
+    return null // or a spinner / skeleton if you prefer
+  }
+  // --- UI guards for clubError (use the codes) ---
+  if (clubError === "not-member") {
+    // user is logged in but not a member of this club
+    return (
+      <div className="max-w-3xl mx-auto px-4 pt-10 pb-6">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
+          <h1 className="mb-2 text-lg font-semibold text-red-800">
+            Access denied
+          </h1>
+          <p className="text-sm text-red-700">
+            You do not have permission to view this events page because you are
+            not a member of this team.
+          </p>
+        </div>
+      </div>
+    )
+  } else if (clubError) {
+    // not-found / failed / error → generic "club not found" message (you can branch further if you like)
     return (
       <div className="max-w-3xl mx-auto px-4 pt-10 pb-6">
         <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
           <h1 className="text-lg font-semibold text-red-800 mb-2">
-            {clubError}
+            Club not found
           </h1>
           <p className="text-sm text-red-700">
-            The club you tried to access doesn&apos;t exist or is no longer
-            available. Please check the URL or switch to another team.
+            The club you tried to access doesn&apos;t exist, is no longer
+            available, or could not be loaded. Please check the URL or switch to
+            another team.
           </p>
         </div>
       </div>

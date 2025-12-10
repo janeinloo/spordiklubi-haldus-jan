@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect } from "react"
 import {
   Card,
   CardContent,
@@ -6,8 +9,19 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { GlassPanelSmall } from "@/components/ui/glasspanel-small"
+import { useRouter } from "next/navigation"
 
 export default function Page() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push("/auth/login")
+    }, 10000) // 10 seconds
+
+    return () => clearTimeout(timer)
+  }, [router])
+
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
       <GlassPanelSmall className="mx-auto">

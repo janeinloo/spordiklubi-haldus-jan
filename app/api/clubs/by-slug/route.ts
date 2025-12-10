@@ -16,21 +16,39 @@ export async function GET(req: NextRequest) {
 
   console.log("[GET /api/clubs/by-slug] incoming slug:", slug)
 
-  const { data, error } = await supabase
+  // 1) Get authenticated user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError) {
+    console.error("[GET /api/clubs/by-slug] auth error:", userError)
+  }
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Not authenticated" },
+      { status: 401 },
+    )
+  }
+
+  // 2) Load club by slug
+  const { data: club, error: clubError } = await supabase
     .from("club")
     .select("id, name, slug, club_logo")
-    .eq("slug", slug) // you can switch to .ilike("slug", slug) if you want case-insensitive
-    .maybeSingle()    // <= important change
+    .eq("slug", slug) // use .ilike if you want case-insensitive
+    .maybeSingle()
 
-  if (error) {
-    console.error("[GET /api/clubs/by-slug] db error:", error)
+  if (clubError) {
+    console.error("[GET /api/clubs/by-slug] db error:", clubError)
     return NextResponse.json(
       { error: "Failed to load club by slug" },
       { status: 500 },
     )
   }
 
-  if (!data) {
+  if (!club) {
     console.warn("[GET /api/clubs/by-slug] no club found for slug:", slug)
     return NextResponse.json(
       { error: "Club not found" },
@@ -38,5 +56,36 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  return NextResponse.json(data)
+  // 3) Check membership in this club (member table: id, profile_id, club_id)
+  const { data: membership, error: membershipError } = await supabase
+    .from("member")
+    .select("id")
+    .eq("club_id", club.id)
+    .eq("profile_id", user.id) // profile_id is UUID matching auth.uid()
+    .maybeSingle()
+
+  if (membershipError) {
+    console.error(
+      "[GET /api/clubs/by-slug] membership check error:",
+      membershipError,
+    )
+    return NextResponse.json(
+      { error: "Failed to verify membership" },
+      { status: 500 },
+    )
+  }
+
+  if (!membership) {
+    console.warn(
+      "[GET /api/clubs/by-slug] user is not a member of this club:",
+      { slug, userId: user.id },
+    )
+    return NextResponse.json(
+      { error: "You are not a member of this club." },
+      { status: 403 },
+    )
+  }
+
+  // 4) All good → user is a member, return club data
+  return NextResponse.json(club)
 }
