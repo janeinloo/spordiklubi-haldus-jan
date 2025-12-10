@@ -62,7 +62,7 @@ export default async function CalendarPage({ params }: Props) {
 
   // 3. Check membership
   const { data: member } = await supabase
-    .from("club_member")
+    .from("member")
     .select("id")
     .eq("club_id", club.id)
     .eq("profile_id", user.id)

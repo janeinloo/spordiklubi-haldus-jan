@@ -81,7 +81,7 @@ export default function ForumPage() {
         .from("member")
         .select("id")
         .eq("club_id", clubId)
-        .eq("user_id", userId)
+        .eq("profile_id", userId)
         .maybeSingle()
 
       setIsMember(!!data)
